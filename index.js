@@ -9,9 +9,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const STORE = path.join(__dirname, 'submissions.json');
 
-app.use(cors());
+// CORS configurável via variável de ambiente CORS_ORIGIN
+// Exemplo: CORS_ORIGIN="https://bgcprojetos.github.io, http://localhost:3000"
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+if (corsOrigin === '*') {
+  app.use(cors());
+} else {
+  const allowed = corsOrigin.split(',').map(s => s.trim());
+  app.use(cors({ origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow server-to-server or tools without Origin
+    if (allowed.includes(origin)) return cb(null, true);
+    cb(new Error('CORS not allowed'));
+  }}));
+}
+
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: '2mb' }));
+
+// Serve static frontend from /public
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure submissions file exists
 if (!fs.existsSync(STORE)) {
@@ -47,6 +63,16 @@ app.get('/submissions', (req, res) => {
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: 'Falha ao ler dados.' });
+  }
+});
+
+// Fallback: serve index.html for SPA routes (optional)
+app.get('*', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Not found');
   }
 });
 

@@ -187,7 +187,7 @@
         }
         .required::after {
             content: " *";
-            color: #e74c3c;
+            color: #e74c8c;
         }
         .success-message {
             background-color: #d4edda;
@@ -384,9 +384,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // ==================== CONFIGURAÇÃO DO BACKEND API ====================
-            // Substitua pela URL do seu backend (ex: https://meu-backend.example.com)
-            // Para desenvolvimento local use: http://localhost:3000
-            const API_BASE = 'https://SEU_BACKEND_URL'; // <-- altere aqui
+            // O frontend é servido pelo mesmo backend — use URLs relativas.
+            const API_BASE = ''; // chamadas serão para '/submit' e '/submissions'
 
             // salvarRegistro usando o backend Express (POST /submit)
             async function salvarRegistro(registro) {
