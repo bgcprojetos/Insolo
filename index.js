@@ -9,7 +9,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const STORE = path.join(__dirname, 'submissions.json');
 
-app.use(cors());
+// CORS configurável via variável de ambiente CORS_ORIGIN
+// Exemplo: CORS_ORIGIN="https://bgcprojetos.github.io, http://localhost:3000"
+const corsOrigin = process.env.CORS_ORIGIN || '*';
+if (corsOrigin === '*') {
+  app.use(cors());
+} else {
+  const allowed = corsOrigin.split(',').map(s => s.trim());
+  app.use(cors({ origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow server-to-server or tools without Origin
+    if (allowed.includes(origin)) return cb(null, true);
+    cb(new Error('CORS not allowed'));
+  }}));
+}
+
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: '2mb' }));
 

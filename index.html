@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INSOLO - Locação de Equipamentos</title>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
     <!-- html2pdf -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -387,42 +383,38 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // ==================== CONFIGURAÇÃO DO FIREBASE ====================
-            // Substitua pelos dados do seu projeto Firebase (copiados do console)
-            const firebaseConfig = {
-                apiKey: "AIzaSy...", // COLE AQUI
-                authDomain: "seu-projeto.firebaseapp.com",
-                projectId: "seu-projeto",
-                storageBucket: "seu-projeto.appspot.com",
-                messagingSenderId: "123456",
-                appId: "1:123456:web:abcdef"
-            };
+            // ==================== CONFIGURAÇÃO DO BACKEND API ====================
+            // Substitua pela URL do seu backend (ex: https://meu-backend.example.com)
+            // Para desenvolvimento local use: http://localhost:3000
+            const API_BASE = 'https://SEU_BACKEND_URL'; // <-- altere aqui
 
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-
-            // ==================== FUNÇÕES DE BANCO ====================
+            // salvarRegistro usando o backend Express (POST /submit)
             async function salvarRegistro(registro) {
-                try {
-                    await db.collection('registros').add(registro);
-                    console.log('Registro salvo no Firebase!');
-                } catch (error) {
-                    console.error('Erro ao salvar:', error);
-                    alert('Erro ao salvar. Verifique sua conexão.');
-                    throw error;
-                }
+              const res = await fetch(`${API_BASE}/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(registro)
+              });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Falha no envio');
+              }
+              return await res.json();
             }
 
+            // getRegistros usando o backend (GET /submissions)
             async function getRegistros() {
-                try {
-                    const snapshot = await db.collection('registros').orderBy('date', 'desc').get();
-                    const registros = [];
-                    snapshot.forEach(doc => registros.push(doc.data()));
-                    return registros;
-                } catch (error) {
-                    console.error('Erro ao buscar:', error);
-                    return [];
+              try {
+                const res = await fetch(`${API_BASE}/submissions`);
+                if (!res.ok) {
+                  console.error('Resposta inválida do backend ao buscar registros:', res.status);
+                  return [];
                 }
+                return await res.json();
+              } catch (e) {
+                console.error('Erro ao buscar registros:', e);
+                return [];
+              }
             }
 
             // ==================== DATAS ====================
