@@ -4,8 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INSOLO - Locação de Equipamentos</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
+        /* ========== SEUS ESTILOS EXISTENTES ========== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -270,7 +278,7 @@
 <body>
     <!-- Overlay -->
     <div class="menu-overlay" id="menuOverlay"></div>
-    
+
     <!-- Menu Lateral -->
     <div class="side-menu" id="sideMenu">
         <div class="menu-header">
@@ -297,12 +305,11 @@
                     <option value="Todas">Todas as Companhias</option>
                 </select>
             </div>
-            <!-- DOIS BOTÕES: BAIXAR PDF E COMPARTILHAR -->
             <button class="pdf-btn" id="downloadPdfBtn">📄 Baixar Relatório (PDF)</button>
             <button class="share-btn" id="shareReportBtn" style="margin-top:10px;">📤 Compartilhar Relatório</button>
         </div>
     </div>
-    
+
     <div class="container">
         <div class="header">
             <h1>INSOLO - Locação de Equipamentos</h1>
@@ -310,7 +317,7 @@
                 <span></span><span></span><span></span>
             </button>
         </div>
-        
+
         <form id="equipmentForm">
             <div class="form-group">
                 <label for="date" class="required">Data</label>
@@ -366,38 +373,72 @@
             </div>
             <button type="submit" class="submit-btn">Enviar Relatório</button>
         </form>
-        
+
         <div class="success-message" id="successMessage">
             Relatório enviado com sucesso!
         </div>
 
-        <!-- Área de exibição do relatório (opcional, mas mantida) -->
+        <!-- Área de exibição do relatório -->
         <div class="report-result" id="reportResult">
             <h3>Relatório de Serviços</h3>
-            <div id="reportContent">
-                <!-- A tabela será inserida aqui -->
-            </div>
+            <div id="reportContent"></div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // -------- Data atual ----------
+            // ==================== CONFIGURAÇÃO DO FIREBASE ====================
+            // Substitua pelos dados do seu projeto Firebase (copiados do console)
+            const firebaseConfig = {
+                apiKey: "AIzaSy...", // COLE AQUI
+                authDomain: "seu-projeto.firebaseapp.com",
+                projectId: "seu-projeto",
+                storageBucket: "seu-projeto.appspot.com",
+                messagingSenderId: "123456",
+                appId: "1:123456:web:abcdef"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            // ==================== FUNÇÕES DE BANCO ====================
+            async function salvarRegistro(registro) {
+                try {
+                    await db.collection('registros').add(registro);
+                    console.log('Registro salvo no Firebase!');
+                } catch (error) {
+                    console.error('Erro ao salvar:', error);
+                    alert('Erro ao salvar. Verifique sua conexão.');
+                    throw error;
+                }
+            }
+
+            async function getRegistros() {
+                try {
+                    const snapshot = await db.collection('registros').orderBy('date', 'desc').get();
+                    const registros = [];
+                    snapshot.forEach(doc => registros.push(doc.data()));
+                    return registros;
+                } catch (error) {
+                    console.error('Erro ao buscar:', error);
+                    return [];
+                }
+            }
+
+            // ==================== DATAS ====================
             const today = new Date();
             const formattedDate = today.toISOString().split('T')[0];
             document.getElementById('date').value = formattedDate;
 
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(today.getDate() - 7);
-            const formattedSevenDaysAgo = sevenDaysAgo.toISOString().split('T')[0];
-            document.getElementById('startDate').value = formattedSevenDaysAgo;
+            document.getElementById('startDate').value = sevenDaysAgo.toISOString().split('T')[0];
             document.getElementById('endDate').value = formattedDate;
 
-            // -------- Assinatura (canvas) ----------
+            // ==================== ASSINATURA (CANVAS) ====================
             const canvas = document.getElementById('signatureCanvas');
             const ctx = canvas.getContext('2d');
-            let isDrawing = false;
-            let lastX = 0, lastY = 0;
+            let isDrawing = false, lastX = 0, lastY = 0;
 
             function resizeCanvas() {
                 const container = canvas.parentElement;
@@ -457,7 +498,7 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
-            // -------- Menu lateral ----------
+            // ==================== MENU ====================
             const menuToggle = document.getElementById('menuToggle');
             const sideMenu = document.getElementById('sideMenu');
             const closeMenu = document.getElementById('closeMenu');
@@ -475,22 +516,8 @@
             closeMenu.addEventListener('click', closeMenuFunc);
             menuOverlay.addEventListener('click', closeMenuFunc);
 
-            // -------- Armazenamento local ----------
-            const STORAGE_KEY = 'insolo_registros';
-
-            function getRegistros() {
-                const data = localStorage.getItem(STORAGE_KEY);
-                return data ? JSON.parse(data) : [];
-            }
-
-            function salvarRegistro(registro) {
-                const registros = getRegistros();
-                registros.push(registro);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
-            }
-
-            // -------- Envio do formulário ----------
-            document.getElementById('equipmentForm').addEventListener('submit', function(e) {
+            // ==================== ENVIO DO FORMULÁRIO ====================
+            document.getElementById('equipmentForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
 
                 const signatureDataUrl = canvas.toDataURL();
@@ -514,22 +541,25 @@
                     timestamp: new Date().toISOString()
                 };
 
-                salvarRegistro(registro);
+                try {
+                    await salvarRegistro(registro);
+                    document.getElementById('successMessage').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('successMessage').style.display = 'none';
+                    }, 3000);
 
-                document.getElementById('successMessage').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('successMessage').style.display = 'none';
-                }, 3000);
-
-                this.reset();
-                document.getElementById('date').value = formattedDate;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                document.getElementById('airline').selectedIndex = 0;
-                document.getElementById('equipment').selectedIndex = 0;
+                    this.reset();
+                    document.getElementById('date').value = formattedDate;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    document.getElementById('airline').selectedIndex = 0;
+                    document.getElementById('equipment').selectedIndex = 0;
+                } catch (error) {
+                    // erro já tratado
+                }
             });
 
-            // -------- Função auxiliar para filtrar registros ----------
-            function filtrarRegistros() {
+            // ==================== RELATÓRIOS ====================
+            async function filtrarRegistros() {
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
                 const airlineFilter = document.getElementById('reportAirline').value;
@@ -539,8 +569,8 @@
                     return null;
                 }
 
-                const registros = getRegistros();
-                const filtrados = registros.filter(r => {
+                const todos = await getRegistros();
+                const filtrados = todos.filter(r => {
                     if (r.date < startDate || r.date > endDate) return false;
                     if (airlineFilter !== 'Todas' && r.airline !== airlineFilter) return false;
                     return true;
@@ -548,22 +578,14 @@
                 return filtrados;
             }
 
-            // -------- Gerar HTML da tabela (usado para exibir e para PDF) ----------
-            function gerarTabelaHTML(registros, startDate, endDate) {
+            function gerarTabelaHTML(registros) {
                 if (!registros || registros.length === 0) {
-                    return '<div class="no-records">Nenhum registro encontrado para o período selecionado.</div>';
+                    return '<div class="no-records">Nenhum registro encontrado.</div>';
                 }
                 let html = `
                     <table class="report-table">
                         <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Cia</th>
-                                <th>Prefixo</th>
-                                <th>Voo</th>
-                                <th>Equipamento</th>
-                                <th>RE</th>
-                            </tr>
+                            <tr><th>Data</th><th>Cia</th><th>Prefixo</th><th>Voo</th><th>Equipamento</th><th>RE</th></tr>
                         </thead>
                         <tbody>
                 `;
@@ -583,36 +605,29 @@
                 return html;
             }
 
-            // -------- Exibir relatório na tela (opcional) ----------
-            function exibirRelatorio(registros, startDate, endDate) {
+            function exibirRelatorio(registros) {
                 const reportResult = document.getElementById('reportResult');
                 const reportContent = document.getElementById('reportContent');
-                if (registros && registros.length > 0) {
-                    reportContent.innerHTML = gerarTabelaHTML(registros, startDate, endDate);
-                    reportResult.classList.add('active');
-                } else {
-                    reportContent.innerHTML = '<div class="no-records">Nenhum registro encontrado.</div>';
-                    reportResult.classList.add('active');
-                }
+                reportContent.innerHTML = gerarTabelaHTML(registros);
+                reportResult.classList.add('active');
             }
 
-            // -------- BAIXAR PDF ----------
-            document.getElementById('downloadPdfBtn').addEventListener('click', function() {
-                const filtrados = filtrarRegistros();
-                if (filtrados === null) return; // alert já foi mostrado
+            // ==================== BAIXAR PDF ====================
+            document.getElementById('downloadPdfBtn').addEventListener('click', async function() {
+                const filtrados = await filtrarRegistros();
+                if (filtrados === null) return;
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
                 const airline = document.getElementById('reportAirline').value;
 
-                // Exibe na tela (opcional)
-                exibirRelatorio(filtrados, startDate, endDate);
+                exibirRelatorio(filtrados);
 
                 if (filtrados.length === 0) {
                     alert('Não há dados para gerar o PDF.');
                     return;
                 }
 
-                // Cria um elemento temporário para o PDF (para não interferir na exibição)
+                // Elemento temporário para o PDF
                 const pdfContent = document.createElement('div');
                 pdfContent.style.padding = '20px';
                 pdfContent.style.fontFamily = 'Segoe UI, sans-serif';
@@ -628,10 +643,8 @@
                 periodo.style.textAlign = 'center';
                 periodo.style.marginBottom = '20px';
 
-                // Tabela
                 const tableWrapper = document.createElement('div');
-                tableWrapper.innerHTML = gerarTabelaHTML(filtrados, startDate, endDate);
-                // Aplica estilos inline para o PDF
+                tableWrapper.innerHTML = gerarTabelaHTML(filtrados);
                 const style = document.createElement('style');
                 style.textContent = `
                     table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -645,85 +658,65 @@
                 pdfContent.appendChild(periodo);
                 pdfContent.appendChild(tableWrapper);
 
-                // Adiciona ao DOM para o html2pdf capturar
                 document.body.appendChild(pdfContent);
-
-                // Gera o PDF
                 const opt = {
-                    margin:        [10, 10],
-                    filename:     `relatorio_${startDate}_a_${endDate}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, logging: false },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    margin: [10, 10],
+                    filename: `relatorio_${startDate}_a_${endDate}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
                 };
                 html2pdf().set(opt).from(pdfContent).save().then(() => {
-                    // Remove o elemento temporário após salvar
                     document.body.removeChild(pdfContent);
                 }).catch(err => {
-                    console.error('Erro ao gerar PDF:', err);
+                    console.error(err);
                     document.body.removeChild(pdfContent);
-                    alert('Erro ao gerar o PDF. Tente novamente.');
+                    alert('Erro ao gerar PDF.');
                 });
-
-                // Fecha o menu
                 closeMenuFunc();
             });
 
-            // -------- COMPARTILHAR ----------
+            // ==================== COMPARTILHAR ====================
             document.getElementById('shareReportBtn').addEventListener('click', async function() {
-                const filtrados = filtrarRegistros();
+                const filtrados = await filtrarRegistros();
                 if (filtrados === null) return;
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
 
-                // Exibe na tela (opcional)
-                exibirRelatorio(filtrados, startDate, endDate);
+                exibirRelatorio(filtrados);
 
                 if (filtrados.length === 0) {
                     alert('Não há dados para compartilhar.');
                     return;
                 }
 
-                // Monta texto resumido
                 let texto = `Relatório INSOLO - ${startDate} a ${endDate}\n\n`;
                 filtrados.forEach((r, i) => {
                     texto += `${i+1}. ${r.date} - ${r.airline} - ${r.prefix} - Voo ${r.flight} - ${r.equipment} - RE: ${r.re}\n`;
                 });
 
-                // Tenta Web Share API
                 if (navigator.share) {
                     try {
-                        await navigator.share({
-                            title: 'Relatório INSOLO',
-                            text: texto,
-                        });
+                        await navigator.share({ title: 'Relatório INSOLO', text: texto });
                         closeMenuFunc();
                         return;
-                    } catch (err) {
-                        if (err.name !== 'AbortError') {
-                            console.error('Erro ao compartilhar:', err);
-                        }
-                        // Se cancelado, não faz nada
-                    }
+                    } catch (err) { /* cancelado */ }
                 }
 
-                // Fallback: copiar para área de transferência
                 try {
                     await navigator.clipboard.writeText(texto);
-                    alert('Resumo do relatório copiado para a área de transferência!');
-                } catch (err) {
-                    // Fallback antigo
+                    alert('Resumo copiado para a área de transferência!');
+                } catch {
                     const textarea = document.createElement('textarea');
                     textarea.value = texto;
                     document.body.appendChild(textarea);
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    alert('Resumo do relatório copiado para a área de transferência!');
+                    alert('Resumo copiado!');
                 }
                 closeMenuFunc();
             });
-
         });
     </script>
 </body>
