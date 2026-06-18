@@ -26,6 +26,9 @@ if (corsOrigin === '*') {
 app.use(morgan('dev'));
 app.use(bodyParser.json({ limit: '2mb' }));
 
+// Serve static frontend from /public
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Ensure submissions file exists
 if (!fs.existsSync(STORE)) {
   fs.writeFileSync(STORE, JSON.stringify([]), 'utf8');
@@ -60,6 +63,16 @@ app.get('/submissions', (req, res) => {
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: 'Falha ao ler dados.' });
+  }
+});
+
+// Fallback: serve index.html for SPA routes (optional)
+app.get('*', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Not found');
   }
 });
 
