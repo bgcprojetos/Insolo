@@ -293,6 +293,70 @@
             font-size: 0.86rem;
         }
 
+        .service-picker {
+            margin: 0 0 18px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            min-width: 0;
+            background: #fff;
+        }
+
+        .service-picker legend {
+            padding: 0 5px;
+            margin-left: -5px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .service-picker.invalid {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+        }
+
+        .service-picker-help {
+            margin: 2px 0 11px;
+            color: #606f7b;
+            font-size: 0.82rem;
+        }
+
+        .service-options {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+        }
+
+        .service-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 0;
+            padding: 9px 10px;
+            border: 1px solid #e1e7ec;
+            border-radius: 5px;
+            background: #fafcfd;
+            color: #34495e;
+            font-size: 0.9rem;
+            font-weight: 500;
+            line-height: 1.3;
+            cursor: pointer;
+        }
+
+        .service-option:hover {
+            border-color: #b8c7d3;
+            background: #f4f8fb;
+        }
+
+        .service-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            margin: 0;
+            padding: 0;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
         .message {
             padding: 12px;
             border-radius: 5px;
@@ -427,7 +491,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.9rem;
-            min-width: 670px;
+            min-width: 1060px;
         }
 
         .report-table th {
@@ -446,6 +510,15 @@
 
         .report-table tr:nth-child(even) {
             background-color: #f9f9f9;
+        }
+
+        .report-table .service-row-continuation td {
+            border-top-style: dashed;
+            color: #4b5563;
+        }
+
+        .report-table td.grouped-cell {
+            background-color: rgba(255, 255, 255, 0.82);
         }
 
         .action-buttons {
@@ -578,6 +651,7 @@
             .icon-button, .menu-toggle { min-width: 38px; height: 38px; }
             .edit-mode-notice { align-items: flex-start; flex-direction: column; }
             .edit-mode-notice button { width: 100%; }
+            .service-options { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -748,23 +822,23 @@
                             <input type="text" id="flight" name="flight" maxlength="30" placeholder="Digite o voo" required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="equipment" class="required">Tipo de locação</label>
-                        <select id="equipment" name="equipment" required>
-                            <option value="" disabled selected>Selecione o tipo</option>
-                            <option value="Locação de GPU">Locação de GPU</option>
-                            <option value="Locação de ACU">Locação de ACU</option>
-                            <option value="Locação de LPU">Locação de LPU</option>
-                            <option value="Pushback extra">Pushback extra</option>
-                            <option value="Reboque de equipamento">Reboque de equipamento</option>
-                            <option value="Reboque de rampa ATR">Reboque de rampa ATR</option>
-                            <option value="Limpeza extra">Limpeza extra</option>
-                            <option value="Guarda-chuvas">Guarda-chuvas</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
+                    <fieldset class="service-picker" id="equipmentPicker" aria-describedby="equipmentHelp">
+                        <legend class="required">Serviços realizados</legend>
+                        <p class="service-picker-help" id="equipmentHelp">Selecione um ou mais serviços para o mesmo atendimento/voo.</p>
+                        <div class="service-options">
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Locação de GPU">Locação de GPU</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Locação de ACU">Locação de ACU</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Locação de LPU">Locação de LPU</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Pushback extra">Pushback extra</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Reboque de equipamento">Reboque de equipamento</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Reboque de rampa ATR">Reboque de rampa ATR</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Limpeza extra">Limpeza extra</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Guarda-chuvas">Guarda-chuvas</label>
+                            <label class="service-option"><input type="checkbox" class="service-type-checkbox" name="serviceTypes" value="Outros">Outros</label>
+                        </div>
+                    </fieldset>
                     <div class="outros-note" id="outrosNote" hidden>
-                        Para “Outros”, todos os demais campos são opcionais. O sistema registrará a data de hoje caso ela fique em branco.
+                        Quando somente “Outros” estiver selecionado, os demais campos serão opcionais. O sistema registrará a data de hoje caso ela fique em branco.
                     </div>
                     <div class="form-group" data-optional-for-outros>
                         <label for="re" class="required">RE do funcionário</label>
@@ -911,8 +985,47 @@
                 return text || '—';
             }
 
+            function getSelectedServiceTypes() {
+                return [...document.querySelectorAll('.service-type-checkbox:checked')]
+                    .map((input) => String(input.value || '').trim())
+                    .filter(Boolean);
+            }
+
+            function normalizeServiceTypes(value, legacyValue = '') {
+                const values = Array.isArray(value) && value.length
+                    ? value
+                    : (value ? [value] : [legacyValue]);
+
+                const normalized = values
+                    .flatMap((item) => String(item ?? '').split(/\s*(?:\||;|\n)\s*/))
+                    .map((item) => item.trim())
+                    .filter(Boolean);
+
+                return [...new Set(normalized)];
+            }
+
+            function formatServiceTypes(value, legacyValue = '') {
+                const types = normalizeServiceTypes(value, legacyValue);
+                return types.length ? types.join(' · ') : '—';
+            }
+
+            function setSelectedServiceTypes(value, legacyValue = '') {
+                const selected = new Set(normalizeServiceTypes(value, legacyValue));
+                document.querySelectorAll('.service-type-checkbox').forEach((input) => {
+                    input.checked = selected.has(input.value);
+                });
+                $('equipmentPicker').classList.remove('invalid');
+            }
+
             function isOutrosSelected() {
-                return $('equipment').value === 'Outros';
+                const selected = getSelectedServiceTypes();
+                return selected.length === 1 && selected[0] === 'Outros';
+            }
+
+            function validateSelectedServiceTypes() {
+                const selected = getSelectedServiceTypes();
+                $('equipmentPicker').classList.toggle('invalid', selected.length === 0);
+                return selected;
             }
 
             function updateFieldsForOutros() {
@@ -1046,7 +1159,12 @@
             window.addEventListener('resize', configureCanvas);
             $('prefix').addEventListener('input', normalizePrefixInput);
             $('prefix').addEventListener('blur', normalizePrefixInput);
-            $('equipment').addEventListener('change', updateFieldsForOutros);
+            document.querySelectorAll('.service-type-checkbox').forEach((input) => {
+                input.addEventListener('change', () => {
+                    $('equipmentPicker').classList.remove('invalid');
+                    updateFieldsForOutros();
+                });
+            });
 
             // A confirmação de sucesso permanece visível até o usuário começar um novo registro.
             equipmentForm.addEventListener('input', hideSuccessMessageWhenStartingNewRecord);
@@ -1396,7 +1514,7 @@
                 $('airline').value = row.airline || '';
                 $('prefix').value = row.prefix || '';
                 $('flight').value = row.flight || '';
-                $('equipment').value = row.equipment || '';
+                setSelectedServiceTypes(row.services, row.equipment);
                 $('re').value = row.re || '';
                 $('observacoes').value = row.observations || '';
                 clearSignature();
@@ -1420,6 +1538,12 @@
                 if (!db || !currentUser) {
                     showMessage(appMessage, 'Sua sessão expirou. Entre novamente.', 'error');
                     showAuthView();
+                    return;
+                }
+
+                const selectedServiceTypes = validateSelectedServiceTypes();
+                if (!selectedServiceTypes.length) {
+                    showMessage(appMessage, 'Selecione pelo menos um serviço realizado.', 'error');
                     return;
                 }
 
@@ -1448,7 +1572,9 @@
                         companhia: emptyToNull($('airline').value),
                         prefixo: emptyToNull($('prefix').value),
                         voo: emptyToNull($('flight').value)?.toUpperCase() || null,
-                        tipo_locacao: $('equipment').value,
+                        // Mantém o campo antigo preenchido para compatibilidade e grava a lista no novo campo.
+                        tipo_locacao: selectedServiceTypes.join(' | '),
+                        tipos_locacao: selectedServiceTypes,
                         re_funcionario: emptyToNull($('re').value),
                         assinatura_path: uploadedSignaturePath || existingSignaturePath,
                         observacoes: emptyToNull($('observacoes').value)
@@ -1554,7 +1680,7 @@
 
                 let query = db
                     .from('registros_servico')
-                    .select('id, data_servico, companhia, prefixo, voo, tipo_locacao, re_funcionario, observacoes, assinatura_path, created_at')
+                    .select('id, data_servico, companhia, prefixo, voo, tipo_locacao, tipos_locacao, re_funcionario, observacoes, assinatura_path, created_at')
                     .gte('data_servico', startDate)
                     .lte('data_servico', endDate)
                     .order('data_servico', { ascending: false })
@@ -1576,7 +1702,8 @@
                         airline: item.companhia,
                         prefix: item.prefixo,
                         flight: item.voo,
-                        equipment: item.tipo_locacao,
+                        services: normalizeServiceTypes(item.tipos_locacao, item.tipo_locacao),
+                        equipment: formatServiceTypes(item.tipos_locacao, item.tipo_locacao),
                         re: item.re_funcionario,
                         observations: item.observacoes,
                         signaturePath: item.assinatura_path
@@ -1592,25 +1719,40 @@
                     return '<div class="no-records">Nenhum registro encontrado para o filtro selecionado.</div>';
                 }
 
-                const body = rows.map((row) => `
-                    <tr>
-                        <td>${escapeHtml(formatDate(row.date))}</td>
-                        <td>${escapeHtml(row.time || formatTime(row.createdAt))}</td>
-                        <td>${escapeHtml(valueOrDash(row.airline))}</td>
-                        <td>${escapeHtml(valueOrDash(row.prefix))}</td>
-                        <td>${escapeHtml(valueOrDash(row.flight))}</td>
-                        <td>${escapeHtml(valueOrDash(row.equipment))}</td>
-                        <td>${escapeHtml(valueOrDash(row.re))}</td>
-                        <td>${escapeHtml(valueOrDash(row.observations))}</td>
-                        <td>${row.signaturePath ? 'Registrada' : '—'}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <button type="button" class="action-btn edit-action" data-action="edit" data-id="${escapeHtml(row.id)}">Editar</button>
-                                <button type="button" class="action-btn delete-action" data-action="delete" data-id="${escapeHtml(row.id)}">Excluir</button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                const body = rows.map((row) => {
+                    const services = row.services?.length ? row.services : ['—'];
+                    const rowspan = services.length;
+
+                    return services.map((service, index) => {
+                        const groupCells = index === 0 ? `
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(formatDate(row.date))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(row.time || formatTime(row.createdAt))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(valueOrDash(row.airline))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(valueOrDash(row.prefix))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(valueOrDash(row.flight))}</td>
+                        ` : '';
+
+                        const endCells = index === 0 ? `
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(valueOrDash(row.re))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${escapeHtml(valueOrDash(row.observations))}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">${row.signaturePath ? 'Registrada' : '—'}</td>
+                            <td class="grouped-cell" rowspan="${rowspan}">
+                                <div class="action-buttons">
+                                    <button type="button" class="action-btn edit-action" data-action="edit" data-id="${escapeHtml(row.id)}">Editar</button>
+                                    <button type="button" class="action-btn delete-action" data-action="delete" data-id="${escapeHtml(row.id)}">Excluir</button>
+                                </div>
+                            </td>
+                        ` : '';
+
+                        return `
+                            <tr class="${index > 0 ? 'service-row-continuation' : 'service-row'}">
+                                ${groupCells}
+                                <td>${escapeHtml(service)}</td>
+                                ${endCells}
+                            </tr>
+                        `;
+                    }).join('');
+                }).join('');
 
                 return `
                     <table class="report-table">
@@ -1621,7 +1763,7 @@
                                 <th>Cia.</th>
                                 <th>Prefixo</th>
                                 <th>Voo</th>
-                                <th>Tipo de locação</th>
+                                <th>Serviço</th>
                                 <th>RE</th>
                                 <th>Observações</th>
                                 <th>Assinatura</th>
@@ -1633,10 +1775,27 @@
                 `;
             }
 
+            function countReportServices(rows) {
+                return rows.reduce((total, row) => total + Math.max(1, row.services?.length || 0), 0);
+            }
+
+            function expandReportServiceRows(rows) {
+                return rows.flatMap((row) => {
+                    const services = row.services?.length ? row.services : ['—'];
+                    return services.map((service, serviceIndex) => ({
+                        ...row,
+                        service,
+                        serviceIndex,
+                        serviceCount: services.length
+                    }));
+                });
+            }
+
             function displayReport(report) {
                 currentReport = report;
                 reportContent.innerHTML = gerarTabelaHTML(report.rows);
-                reportMeta.textContent = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)} · Companhia: ${report.airline} · ${report.rows.length} registro(s)`;
+                const serviceCount = countReportServices(report.rows);
+                reportMeta.textContent = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)} · Companhia: ${report.airline} · ${report.rows.length} atendimento(s) · ${serviceCount} serviço(s)`;
                 serviceView.hidden = true;
                 reportView.hidden = false;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1793,14 +1952,16 @@
                 const pageHeight = doc.internal.pageSize.getHeight();
                 const margin = 10;
                 const availableWidth = pageWidth - (margin * 2);
+                const tableRows = expandReportServiceRows(report.rows);
+                const groupValue = (row, value) => row.serviceIndex === 0 ? value : '';
                 const columns = [
-                    { header: 'Data', width: 25, value: (row) => formatDate(row.date) },
-                    { header: 'Hora', width: 20, value: (row) => row.time || formatTime(row.createdAt) },
-                    { header: 'Cia.', width: 20, value: (row) => valueOrDash(row.airline) },
-                    { header: 'Prefixo', width: 28, value: (row) => valueOrDash(row.prefix) },
-                    { header: 'Voo', width: 25, value: (row) => valueOrDash(row.flight) },
-                    { header: 'Tipo de locação', width: 112, value: (row) => valueOrDash(row.equipment) },
-                    { header: 'RE', width: 37, value: (row) => valueOrDash(row.re) }
+                    { header: 'Data', width: 25, value: (row) => groupValue(row, formatDate(row.date)) },
+                    { header: 'Hora', width: 20, value: (row) => groupValue(row, row.time || formatTime(row.createdAt)) },
+                    { header: 'Cia.', width: 20, value: (row) => groupValue(row, valueOrDash(row.airline)) },
+                    { header: 'Prefixo', width: 28, value: (row) => groupValue(row, valueOrDash(row.prefix)) },
+                    { header: 'Voo', width: 25, value: (row) => groupValue(row, valueOrDash(row.flight)) },
+                    { header: 'Serviço', width: 112, value: (row) => row.service || '—' },
+                    { header: 'RE', width: 37, value: (row) => groupValue(row, valueOrDash(row.re)) }
                 ];
 
                 let y = 14;
@@ -1815,7 +1976,7 @@
                     doc.setTextColor(55, 65, 81);
                     doc.setFont('helvetica', 'normal');
                     doc.setFontSize(9);
-                    const meta = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)}  |  Companhia: ${report.airline}  |  ${report.rows.length} registro(s)`;
+                    const meta = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)}  |  Companhia: ${report.airline}  |  ${report.rows.length} atendimento(s)  |  ${tableRows.length} serviço(s)`;
                     doc.text(meta, pageWidth / 2, y, { align: 'center' });
                     y += 7;
                 };
@@ -1892,7 +2053,7 @@
                     const textX = margin + 2;
                     const imageX = pageWidth - margin - signatureWidth - 2;
                     const textWidth = availableWidth - signatureWidth - gap - 6;
-                    const summary = `${index + 1}. ${formatDate(row.date)} ${row.time || formatTime(row.createdAt)} | ${valueOrDash(row.airline)} | Prefixo: ${valueOrDash(row.prefix)} | Voo: ${valueOrDash(row.flight)} | ${valueOrDash(row.equipment)} | RE: ${valueOrDash(row.re)}`;
+                    const summary = `${index + 1}. ${formatDate(row.date)} ${row.time || formatTime(row.createdAt)} | ${valueOrDash(row.airline)} | Prefixo: ${valueOrDash(row.prefix)} | Voo: ${valueOrDash(row.flight)} | Serviços: ${formatServiceTypes(row.services, row.equipment)} | RE: ${valueOrDash(row.re)}`;
                     const summaryLines = doc.splitTextToSize(summary, textWidth);
                     const observationText = `Observações: ${valueOrDash(row.observations)}`;
                     const observationLines = doc.splitTextToSize(observationText, textWidth);
@@ -1937,7 +2098,7 @@
 
                 drawTitle();
                 drawHeader();
-                report.rows.forEach(drawRow);
+                tableRows.forEach(drawRow);
 
                 drawDetailsHeading();
                 for (let index = 0; index < report.rows.length; index += 1) {
@@ -2059,11 +2220,12 @@
                     return;
                 }
 
-                const lines = report.rows.map((row, index) =>
-                    `${index + 1}. ${formatDate(row.date)} ${row.time || formatTime(row.createdAt)} - ${row.airline} - ${row.prefix} - Voo ${row.flight} - ${row.equipment} - RE: ${row.re}`
+                const serviceRows = expandReportServiceRows(report.rows);
+                const lines = serviceRows.map((row, index) =>
+                    `${index + 1}. ${formatDate(row.date)} ${row.time || formatTime(row.createdAt)} - ${valueOrDash(row.airline)} - ${valueOrDash(row.prefix)} - Voo ${valueOrDash(row.flight)} - ${row.service || '—'} - RE: ${valueOrDash(row.re)}`
                 );
                 const title = 'Relatório INSOLO';
-                const text = `${title}\nPeríodo: ${formatDate(report.startDate)} a ${formatDate(report.endDate)}\nCompanhia: ${report.airline}\n\n${lines.join('\n')}`;
+                const text = `${title}\nPeríodo: ${formatDate(report.startDate)} a ${formatDate(report.endDate)}\nCompanhia: ${report.airline}\nAtendimentos: ${report.rows.length} | Serviços: ${serviceRows.length}\n\n${lines.join('\n')}`;
 
                 try {
                     if (window.InsoloAndroid && typeof window.InsoloAndroid.shareText === 'function') {
