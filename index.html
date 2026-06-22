@@ -361,6 +361,36 @@
             background-color: #dfe6e9;
         }
 
+        .edit-mode-notice {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 16px;
+            padding: 12px;
+            border: 1px solid #b8d9f3;
+            border-radius: 6px;
+            background: #eef7ff;
+            color: #1f4f70;
+        }
+
+        .edit-mode-notice strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .edit-mode-notice p {
+            margin: 0;
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+
+        .edit-mode-notice button {
+            width: auto;
+            min-width: 118px;
+            padding: 9px 11px;
+        }
+
         .report-result {
             margin-top: 4px;
             padding-top: 4px;
@@ -417,6 +447,40 @@
         .report-table tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            min-width: 145px;
+        }
+
+        .action-btn {
+            width: auto;
+            padding: 7px 9px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .edit-action {
+            background: #ecf0f1;
+            color: var(--primary);
+            border: 1px solid #d7dde3;
+        }
+
+        .edit-action:hover:not(:disabled) {
+            background: #dfe6e9;
+        }
+
+        .delete-action {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .delete-action:hover:not(:disabled) {
+            background: var(--danger-dark);
+        }
+
 
         .no-records {
             text-align: center;
@@ -512,6 +576,8 @@
             .side-menu { width: 100%; right: -100%; }
             .header-actions { gap: 5px; }
             .icon-button, .menu-toggle { min-width: 38px; height: 38px; }
+            .edit-mode-notice { align-items: flex-start; flex-direction: column; }
+            .edit-mode-notice button { width: 100%; }
         }
     </style>
 </head>
@@ -650,6 +716,14 @@
             <div id="appMessage" class="message" role="alert"></div>
 
             <section id="serviceView">
+                <div class="edit-mode-notice" id="editModeNotice" hidden>
+                    <div>
+                        <strong>Editando serviço</strong>
+                        <p id="editModeText">A assinatura já registrada será mantida. Assine novamente apenas se desejar substituí-la.</p>
+                    </div>
+                    <button type="button" class="secondary-btn" id="cancelEditBtn">Cancelar edição</button>
+                </div>
+
                 <form id="equipmentForm">
                     <div class="form-group" data-optional-for-outros>
                         <label for="date" class="required">Data</label>
@@ -766,6 +840,8 @@
             const reportView = $('reportView');
             const reportContent = $('reportContent');
             const reportMeta = $('reportMeta');
+            const editModeNotice = $('editModeNotice');
+            const editModeText = $('editModeText');
             const canvas = $('signatureCanvas');
             const ctx = canvas.getContext('2d');
 
@@ -775,6 +851,8 @@
             let drawing = false;
             let lastPoint = null;
             let signatureHasInk = false;
+            let editingService = null;
+            let currentReport = null;
             let passwordRecoveryMode = new URLSearchParams(window.location.search).get('redefinir-senha') === '1';
 
             function localISODate(date = new Date()) {
@@ -864,6 +942,16 @@
             function hideMessage(element) {
                 element.textContent = '';
                 element.className = 'message';
+            }
+
+            function showSavedMessage(text) {
+                showMessage(appMessage, text, 'success');
+            }
+
+            function hideSuccessMessageWhenStartingNewRecord() {
+                if (appMessage.classList.contains('success')) {
+                    hideMessage(appMessage);
+                }
             }
 
             function setButtonLoading(button, loading, loadingText = 'Processando...') {
@@ -959,6 +1047,13 @@
             $('prefix').addEventListener('input', normalizePrefixInput);
             $('prefix').addEventListener('blur', normalizePrefixInput);
             $('equipment').addEventListener('change', updateFieldsForOutros);
+
+            // A confirmação de sucesso permanece visível até o usuário começar um novo registro.
+            equipmentForm.addEventListener('input', hideSuccessMessageWhenStartingNewRecord);
+            equipmentForm.addEventListener('change', hideSuccessMessageWhenStartingNewRecord);
+            canvas.addEventListener('pointerdown', hideSuccessMessageWhenStartingNewRecord);
+            $('clearSignature').addEventListener('click', hideSuccessMessageWhenStartingNewRecord);
+
             updateFieldsForOutros();
 
             // ---------------- Interface ----------------
@@ -1289,6 +1384,37 @@
                 updateFieldsForOutros();
             }
 
+            function leaveEditMode() {
+                editingService = null;
+                editModeNotice.hidden = true;
+                submitBtn.textContent = 'Salvar serviço';
+            }
+
+            function startEditingService(row) {
+                editingService = { ...row };
+                $('date').value = row.date || localISODate();
+                $('airline').value = row.airline || '';
+                $('prefix').value = row.prefix || '';
+                $('flight').value = row.flight || '';
+                $('equipment').value = row.equipment || '';
+                $('re').value = row.re || '';
+                $('observacoes').value = row.observations || '';
+                clearSignature();
+                updateFieldsForOutros();
+
+                editModeText.textContent = row.signaturePath
+                    ? 'A assinatura já registrada será mantida. Assine novamente apenas se desejar substituí-la.'
+                    : 'Este registro não possui assinatura. Assine no quadro caso queira incluir uma.';
+                editModeNotice.hidden = false;
+                submitBtn.textContent = 'Salvar alterações';
+                showServiceView();
+            }
+
+            async function refreshCurrentReport() {
+                const report = await buscarRegistrosFiltrados();
+                if (report) displayReport(report);
+            }
+
             equipmentForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 if (!db || !currentUser) {
@@ -1298,15 +1424,17 @@
                 }
 
                 const outrosSelecionado = isOutrosSelected();
+                const isEditing = Boolean(editingService);
+                const existingSignaturePath = editingService?.signaturePath || null;
 
-                if (!outrosSelecionado && !signatureHasInk) {
+                if (!outrosSelecionado && !signatureHasInk && !existingSignaturePath) {
                     showMessage(appMessage, 'Por favor, forneça a assinatura antes de salvar.', 'error');
                     return;
                 }
 
                 const button = submitBtn;
                 let uploadedSignaturePath = null;
-                setButtonLoading(button, true, 'Salvando...');
+                setButtonLoading(button, true, isEditing ? 'Salvando alterações...' : 'Salvando...');
                 hideMessage(appMessage);
 
                 try {
@@ -1315,70 +1443,86 @@
                     }
 
                     normalizePrefixInput();
-                    const payload = {
+                    const formPayload = {
                         data_servico: $('date').value || localISODate(),
                         companhia: emptyToNull($('airline').value),
                         prefixo: emptyToNull($('prefix').value),
                         voo: emptyToNull($('flight').value)?.toUpperCase() || null,
                         tipo_locacao: $('equipment').value,
                         re_funcionario: emptyToNull($('re').value),
-                        email_destino: 'Destinatários configurados no Secret EMAIL_TO',
-                        assinatura_path: uploadedSignaturePath,
-                        observacoes: emptyToNull($('observacoes').value),
-                        criado_por: currentUser.id
+                        assinatura_path: uploadedSignaturePath || existingSignaturePath,
+                        observacoes: emptyToNull($('observacoes').value)
                     };
 
-                    const { data: insertedService, error } = await db
-                        .from('registros_servico')
-                        .insert(payload)
-                        .select('id, created_at')
-                        .single();
+                    if (isEditing) {
+                        const { error } = await db
+                            .from('registros_servico')
+                            .update(formPayload)
+                            .eq('id', editingService.id);
 
-                    if (error) throw error;
+                        if (error) throw error;
 
-                    let emailWarning = '';
-                    try {
-                        const { data: functionData, error: functionError } = await db.functions.invoke('send-service-email', {
-                            body: {
-                                // Mantido por compatibilidade com a versão anterior da Edge Function.
-                                // Os destinatários reais são lidos no Secret EMAIL_TO.
-                                recipientEmail: 'destinatarios-configurados@insolo.local',
-                                date: payload.data_servico,
-                                time: formatTime(insertedService.created_at),
-                                airline: payload.companhia,
-                                prefix: payload.prefixo,
-                                flight: payload.voo,
-                                equipment: payload.tipo_locacao,
-                                re: payload.re_funcionario,
-                                observations: payload.observacoes
-                            }
-                        });
-
-                        if (functionError) {
-                            let message = functionError.message || 'Falha ao chamar a função de e-mail.';
-                            try {
-                                const details = await functionError.context?.json?.();
-                                message = details?.error || details?.message || message;
-                            } catch (_) {
-                                // A resposta de erro pode não conter JSON. Mantém a mensagem original.
-                            }
-                            throw new Error(message);
+                        if (uploadedSignaturePath && existingSignaturePath && uploadedSignaturePath !== existingSignaturePath) {
+                            const { error: removeError } = await db.storage
+                                .from(SIGNATURE_BUCKET)
+                                .remove([existingSignaturePath]);
+                            if (removeError) console.warn('Não foi possível remover a assinatura anterior:', removeError.message);
                         }
 
-                        if (functionData?.success === false) {
-                            throw new Error(functionData.error || 'A função de e-mail retornou uma falha.');
+                        leaveEditMode();
+                        resetEquipmentForm();
+                        await refreshCurrentReport();
+                        showSavedMessage('Serviço atualizado com sucesso.');
+                    } else {
+                        const payload = {
+                            ...formPayload,
+                            email_destino: 'Destinatários configurados no Secret EMAIL_TO',
+                            criado_por: currentUser.id
+                        };
+
+                        const { data: insertedService, error } = await db
+                            .from('registros_servico')
+                            .insert(payload)
+                            .select('id, created_at')
+                            .single();
+
+                        if (error) throw error;
+
+                        // O banco é a referência do salvamento. Uma falha do e-mail não altera
+                        // a confirmação na tela; ela fica registrada nos logs da Edge Function.
+                        try {
+                            const { data: functionData, error: functionError } = await db.functions.invoke('send-service-email', {
+                                body: {
+                                    recipientEmail: 'destinatarios-configurados@insolo.local',
+                                    date: payload.data_servico,
+                                    time: formatTime(insertedService.created_at),
+                                    airline: payload.companhia,
+                                    prefix: payload.prefixo,
+                                    flight: payload.voo,
+                                    equipment: payload.tipo_locacao,
+                                    re: payload.re_funcionario,
+                                    observations: payload.observacoes
+                                }
+                            });
+
+                            if (functionError) {
+                                throw new Error(functionError.message || 'Falha ao chamar a função de e-mail.');
+                            }
+
+                            if (functionData?.success === false) {
+                                throw new Error(functionData.error || 'A função de e-mail retornou uma falha.');
+                            }
+                        } catch (emailError) {
+                            console.warn('Serviço salvo, mas o e-mail não foi enviado:', emailError);
                         }
-                    } catch (emailError) {
-                        console.error('Falha ao enviar e-mail:', emailError);
-                        emailWarning = ` O serviço foi salvo, mas o e-mail não foi enviado: ${emailError.message || 'verifique a Edge Function e os Secrets.'}`;
+
+                        resetEquipmentForm();
+                        showSavedMessage('Serviço salvo com sucesso.');
                     }
-
-                    showMessage(appMessage, `Serviço salvo com sucesso no banco online.${emailWarning}`, emailWarning ? 'info' : 'success');
-                    resetEquipmentForm();
                 } catch (error) {
                     console.error(error);
 
-                    // Evita manter uma assinatura sem registro se a inserção falhar.
+                    // Evita manter uma nova assinatura sem registro se a gravação falhar.
                     if (uploadedSignaturePath) {
                         const { error: removeError } = await db.storage
                             .from(SIGNATURE_BUCKET)
@@ -1425,6 +1569,7 @@
 
                 return {
                     rows: data.map((item) => ({
+                        id: item.id,
                         date: item.data_servico,
                         createdAt: item.created_at,
                         time: formatTime(item.created_at),
@@ -1458,6 +1603,12 @@
                         <td>${escapeHtml(valueOrDash(row.re))}</td>
                         <td>${escapeHtml(valueOrDash(row.observations))}</td>
                         <td>${row.signaturePath ? 'Registrada' : '—'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button type="button" class="action-btn edit-action" data-action="edit" data-id="${escapeHtml(row.id)}">Editar</button>
+                                <button type="button" class="action-btn delete-action" data-action="delete" data-id="${escapeHtml(row.id)}">Excluir</button>
+                            </div>
+                        </td>
                     </tr>
                 `).join('');
 
@@ -1474,6 +1625,7 @@
                                 <th>RE</th>
                                 <th>Observações</th>
                                 <th>Assinatura</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>${body}</tbody>
@@ -1482,6 +1634,7 @@
             }
 
             function displayReport(report) {
+                currentReport = report;
                 reportContent.innerHTML = gerarTabelaHTML(report.rows);
                 reportMeta.textContent = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)} · Companhia: ${report.airline} · ${report.rows.length} registro(s)`;
                 serviceView.hidden = true;
@@ -1496,6 +1649,59 @@
             }
 
             $('backToServiceBtn').addEventListener('click', showServiceView);
+            $('cancelEditBtn').addEventListener('click', async () => {
+                leaveEditMode();
+                resetEquipmentForm();
+                if (currentReport) {
+                    await refreshCurrentReport();
+                } else {
+                    showServiceView();
+                }
+            });
+
+            reportContent.addEventListener('click', async (event) => {
+                const actionButton = event.target.closest('button[data-action]');
+                if (!actionButton) return;
+
+                const row = currentReport?.rows?.find((item) => item.id === actionButton.dataset.id);
+                if (!row) return;
+
+                if (actionButton.dataset.action === 'edit') {
+                    startEditingService(row);
+                    return;
+                }
+
+                if (actionButton.dataset.action === 'delete') {
+                    const description = `${formatDate(row.date)} · ${valueOrDash(row.equipment)}`;
+                    const confirmed = window.confirm(`Excluir definitivamente este serviço?\n\n${description}`);
+                    if (!confirmed) return;
+
+                    setButtonLoading(actionButton, true, 'Excluindo...');
+                    hideMessage(appMessage);
+                    try {
+                        const { error } = await db
+                            .from('registros_servico')
+                            .delete()
+                            .eq('id', row.id);
+                        if (error) throw error;
+
+                        if (row.signaturePath) {
+                            const { error: storageError } = await db.storage
+                                .from(SIGNATURE_BUCKET)
+                                .remove([row.signaturePath]);
+                            if (storageError) console.warn('O serviço foi excluído, mas não foi possível remover a assinatura:', storageError.message);
+                        }
+
+                        await refreshCurrentReport();
+                        showSavedMessage('Serviço excluído com sucesso.');
+                    } catch (error) {
+                        console.error(error);
+                        showMessage(appMessage, `Não foi possível excluir o serviço: ${error.message}`, 'error');
+                    } finally {
+                        setButtonLoading(actionButton, false);
+                    }
+                }
+            });
 
             async function getReportWithFeedback(button, loadingText) {
                 if (!db || !currentUser) {
@@ -1680,8 +1886,8 @@
 
                 const drawDetailCard = async (row, index) => {
                     const signature = await getSignaturePdfImage(row.signaturePath);
-                    const signatureWidth = 62;
-                    const signatureHeight = 22;
+                    const signatureWidth = 48;
+                    const signatureHeight = 10;
                     const gap = 5;
                     const textX = margin + 2;
                     const imageX = pageWidth - margin - signatureWidth - 2;
@@ -1691,7 +1897,7 @@
                     const observationText = `Observações: ${valueOrDash(row.observations)}`;
                     const observationLines = doc.splitTextToSize(observationText, textWidth);
                     const textHeight = (summaryLines.length * 3.8) + (observationLines.length * 3.8);
-                    const cardHeight = Math.max(34, textHeight + 10);
+                    const cardHeight = Math.max(21, textHeight + 8);
 
                     if (y + cardHeight > pageHeight - margin) {
                         doc.addPage();
@@ -1713,17 +1919,17 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(7);
                     doc.setTextColor(55, 65, 81);
-                    doc.text('Assinatura:', imageX, y + 4);
+                    doc.text('Assinatura:', imageX, y + 3.5);
 
                     if (signature?.dataUrl) {
-                        doc.addImage(signature.dataUrl, signature.format, imageX, y + 6, signatureWidth, signatureHeight);
+                        doc.addImage(signature.dataUrl, signature.format, imageX, y + 5, signatureWidth, signatureHeight);
                     } else {
                         doc.setDrawColor(189, 195, 199);
-                        doc.rect(imageX, y + 6, signatureWidth, signatureHeight);
+                        doc.rect(imageX, y + 5, signatureWidth, signatureHeight);
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(7);
                         doc.setTextColor(127, 140, 141);
-                        doc.text('Não registrada', imageX + (signatureWidth / 2), y + 18, { align: 'center' });
+                        doc.text('Não registrada', imageX + (signatureWidth / 2), y + 11.5, { align: 'center' });
                     }
 
                     y += cardHeight + 3;
