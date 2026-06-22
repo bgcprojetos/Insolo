@@ -194,7 +194,8 @@
         }
 
         input,
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid var(--border);
@@ -204,8 +205,14 @@
             background: #fff;
         }
 
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
         input:focus,
-        select:focus {
+        select:focus,
+        textarea:focus {
             border-color: #3498db;
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.13);
             outline: none;
@@ -274,6 +281,16 @@
             font-size: 0.8rem;
             color: #7f8c8d;
             margin-top: 5px;
+        }
+
+        .outros-note {
+            margin: -6px 0 16px;
+            padding: 10px 12px;
+            background: #eef7ff;
+            color: #28526f;
+            border: 1px solid #cfe7f7;
+            border-radius: 5px;
+            font-size: 0.86rem;
         }
 
         .message {
@@ -345,17 +362,23 @@
         }
 
         .report-result {
-            display: none;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #3498db;
+            margin-top: 4px;
+            padding-top: 4px;
         }
 
-        .report-result.active {
-            display: block;
+        .report-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
-        .report-result h3 {
+        .report-toolbar .secondary-btn {
+            width: auto;
+            padding: 10px 14px;
+        }
+
+        .report-result h2 {
             color: var(--primary);
             margin-bottom: 8px;
         }
@@ -626,66 +649,75 @@
 
             <div id="appMessage" class="message" role="alert"></div>
 
-            <form id="equipmentForm">
-                <div class="form-group">
-                    <label for="date" class="required">Data</label>
-                    <input type="date" id="date" name="date" required>
-                </div>
-                <div class="form-group">
-                    <label for="airline" class="required">Companhia aérea</label>
-                    <select id="airline" name="airline" required>
-                        <option value="" disabled selected>Selecione uma companhia</option>
-                        <option value="Azul">Azul</option>
-                        <option value="Gol">Gol</option>
-                        <option value="LATAM">LATAM</option>
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-field">
-                        <label for="prefix" class="required">Prefixo</label>
-                        <input type="text" id="prefix" name="prefix" maxlength="6" pattern="[A-Z]{2}-[A-Z0-9]{1,3}" title="Use duas letras, hífen e até três letras ou números." autocapitalize="characters" autocomplete="off" placeholder="" required>
+            <section id="serviceView">
+                <form id="equipmentForm">
+                    <div class="form-group" data-optional-for-outros>
+                        <label for="date" class="required">Data</label>
+                        <input type="date" id="date" name="date" required>
                     </div>
-                    <div class="form-field">
-                        <label for="flight" class="required">Voo</label>
-                        <input type="text" id="flight" name="flight" maxlength="30" placeholder="Digite o voo" required>
+                    <div class="form-group" data-optional-for-outros>
+                        <label for="airline" class="required">Companhia aérea</label>
+                        <select id="airline" name="airline" required>
+                            <option value="" disabled selected>Selecione uma companhia</option>
+                            <option value="Azul">Azul</option>
+                            <option value="Gol">Gol</option>
+                            <option value="LATAM">LATAM</option>
+                        </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="equipment" class="required">Tipo de locação</label>
-                    <select id="equipment" name="equipment" required>
-                        <option value="" disabled selected>Selecione o tipo</option>
-                        <option value="Locação de GPU">Locação de GPU</option>
-                        <option value="Locação de ACU">Locação de ACU</option>
-                        <option value="Locação de LPU">Locação de LPU</option>
-                        <option value="Pushback extra">Pushback extra</option>
-                        <option value="Reboque de equipamento">Reboque de equipamento</option>
-                        <option value="Reboque de rampa ATR">Reboque de rampa ATR</option>
-                        <option value="Limpeza extra">Limpeza extra</option>
-                        <option value="Guarda-chuvas">Guarda-chuvas</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="re" class="required">RE do funcionário</label>
-                    <input type="text" id="re" name="re" maxlength="50" placeholder="Digite o RE" required>
-                </div>
-                <div class="form-group">
-                    <label for="signature" class="required">Assinatura</label>
-                    <div class="signature-container">
-                        <canvas id="signatureCanvas" aria-label="Área para assinatura"></canvas>
+                    <div class="form-row">
+                        <div class="form-field" data-optional-for-outros>
+                            <label for="prefix" class="required">Prefixo</label>
+                            <input type="text" id="prefix" name="prefix" maxlength="6" pattern="[A-Z]{2}-[A-Z0-9]{1,3}" title="Use duas letras, hífen e até três letras ou números." autocapitalize="characters" autocomplete="off" placeholder="" required>
+                        </div>
+                        <div class="form-field" data-optional-for-outros>
+                            <label for="flight" class="required">Voo</label>
+                            <input type="text" id="flight" name="flight" maxlength="30" placeholder="Digite o voo" required>
+                        </div>
                     </div>
-                    <div class="signature-note">Assine com o dedo, caneta ou mouse na área acima.</div>
-                    <button type="button" class="clear-btn" id="clearSignature">Limpar assinatura</button>
-                </div>
-                <div class="form-group">
-                    <label for="recipientEmail">E-mail de destino</label>
-                    <input type="email" id="recipientEmail" name="recipientEmail" maxlength="255" placeholder="destino@exemplo.com" required>
-                    <div class="help-text">O serviço só será salvo depois de tentar enviar um resumo para este endereço. Caso o envio falhe, o sistema mostrará o motivo.</div>
-                </div>
-                <button type="submit" class="submit-btn" id="submitBtn">Salvar serviço</button>
-            </form>
+                    <div class="form-group">
+                        <label for="equipment" class="required">Tipo de locação</label>
+                        <select id="equipment" name="equipment" required>
+                            <option value="" disabled selected>Selecione o tipo</option>
+                            <option value="Locação de GPU">Locação de GPU</option>
+                            <option value="Locação de ACU">Locação de ACU</option>
+                            <option value="Locação de LPU">Locação de LPU</option>
+                            <option value="Pushback extra">Pushback extra</option>
+                            <option value="Reboque de equipamento">Reboque de equipamento</option>
+                            <option value="Reboque de rampa ATR">Reboque de rampa ATR</option>
+                            <option value="Limpeza extra">Limpeza extra</option>
+                            <option value="Guarda-chuvas">Guarda-chuvas</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="outros-note" id="outrosNote" hidden>
+                        Para “Outros”, todos os demais campos são opcionais. O sistema registrará a data de hoje caso ela fique em branco.
+                    </div>
+                    <div class="form-group" data-optional-for-outros>
+                        <label for="re" class="required">RE do funcionário</label>
+                        <input type="text" id="re" name="re" maxlength="50" placeholder="Digite o RE" required>
+                    </div>
+                    <div class="form-group" data-optional-for-outros>
+                        <label for="signature" class="required">Assinatura</label>
+                        <div class="signature-container">
+                            <canvas id="signatureCanvas" aria-label="Área para assinatura"></canvas>
+                        </div>
+                        <div class="signature-note">Assine com o dedo, caneta ou mouse na área acima.</div>
+                        <button type="button" class="clear-btn" id="clearSignature">Limpar assinatura</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" name="observacoes" rows="4" maxlength="1000" placeholder="Digite observações sobre o serviço, caso necessário."></textarea>
+                    </div>
+                    <div class="help-text">Os e-mails de destino são configurados no Supabase, no Secret <strong>EMAIL_TO</strong>.</div>
+                    <button type="submit" class="submit-btn" id="submitBtn">Salvar serviço</button>
+                </form>
+            </section>
 
-            <section class="report-result" id="reportResult">
-                <h3>Relatório de serviços</h3>
+            <section class="report-result" id="reportView" hidden>
+                <div class="report-toolbar">
+                    <button type="button" class="secondary-btn" id="backToServiceBtn">← Voltar ao registro</button>
+                </div>
+                <h2>Relatório de serviços</h2>
                 <p class="report-meta" id="reportMeta"></p>
                 <div class="table-wrapper" id="reportContent"></div>
             </section>
@@ -730,7 +762,8 @@
             const submitBtn = $('submitBtn');
             const sideMenu = $('sideMenu');
             const menuOverlay = $('menuOverlay');
-            const reportResult = $('reportResult');
+            const serviceView = $('serviceView');
+            const reportView = $('reportView');
             const reportContent = $('reportContent');
             const reportMeta = $('reportMeta');
             const canvas = $('signatureCanvas');
@@ -788,6 +821,39 @@
             function normalizePrefixInput() {
                 const field = $('prefix');
                 field.value = formatPrefix(field.value);
+            }
+
+            function emptyToNull(value) {
+                const text = String(value ?? '').trim();
+                return text || null;
+            }
+
+            function valueOrDash(value) {
+                const text = String(value ?? '').trim();
+                return text || '—';
+            }
+
+            function isOutrosSelected() {
+                return $('equipment').value === 'Outros';
+            }
+
+            function updateFieldsForOutros() {
+                const outrosSelecionado = isOutrosSelected();
+
+                document.querySelectorAll('[data-optional-for-outros]').forEach((group) => {
+                    const field = group.querySelector('input, select, textarea');
+                    const label = group.querySelector('label');
+
+                    if (field) {
+                        field.required = !outrosSelecionado;
+                    }
+
+                    if (label) {
+                        label.classList.toggle('required', !outrosSelecionado);
+                    }
+                });
+
+                $('outrosNote').hidden = !outrosSelecionado;
             }
 
             function showMessage(element, text, type = 'info') {
@@ -892,6 +958,8 @@
             window.addEventListener('resize', configureCanvas);
             $('prefix').addEventListener('input', normalizePrefixInput);
             $('prefix').addEventListener('blur', normalizePrefixInput);
+            $('equipment').addEventListener('change', updateFieldsForOutros);
+            updateFieldsForOutros();
 
             // ---------------- Interface ----------------
             function openMenu() {
@@ -956,7 +1024,8 @@
                 appView.hidden = true;
                 authView.hidden = false;
                 closeMenu();
-                reportResult.classList.remove('active');
+                serviceView.hidden = false;
+                reportView.hidden = true;
                 hideMessage(appMessage);
 
                 if (passwordRecoveryMode) {
@@ -992,6 +1061,8 @@
 
                 authView.hidden = true;
                 appView.hidden = false;
+                serviceView.hidden = false;
+                reportView.hidden = true;
                 setTimeout(configureCanvas, 0);
             }
 
@@ -1215,6 +1286,7 @@
                 equipmentForm.reset();
                 $('date').value = localISODate();
                 clearSignature();
+                updateFieldsForOutros();
             }
 
             equipmentForm.addEventListener('submit', async (event) => {
@@ -1225,7 +1297,9 @@
                     return;
                 }
 
-                if (!signatureHasInk) {
+                const outrosSelecionado = isOutrosSelected();
+
+                if (!outrosSelecionado && !signatureHasInk) {
                     showMessage(appMessage, 'Por favor, forneça a assinatura antes de salvar.', 'error');
                     return;
                 }
@@ -1236,18 +1310,21 @@
                 hideMessage(appMessage);
 
                 try {
-                    uploadedSignaturePath = await uploadSignature();
+                    if (signatureHasInk) {
+                        uploadedSignaturePath = await uploadSignature();
+                    }
 
                     normalizePrefixInput();
                     const payload = {
-                        data_servico: $('date').value,
-                        companhia: $('airline').value,
-                        prefixo: $('prefix').value.trim(),
-                        voo: $('flight').value.trim().toUpperCase(),
+                        data_servico: $('date').value || localISODate(),
+                        companhia: emptyToNull($('airline').value),
+                        prefixo: emptyToNull($('prefix').value),
+                        voo: emptyToNull($('flight').value)?.toUpperCase() || null,
                         tipo_locacao: $('equipment').value,
-                        re_funcionario: $('re').value.trim(),
-                        email_destino: $('recipientEmail').value.trim().toLowerCase() || null,
+                        re_funcionario: emptyToNull($('re').value),
+                        email_destino: 'Destinatários configurados no Secret EMAIL_TO',
                         assinatura_path: uploadedSignaturePath,
+                        observacoes: emptyToNull($('observacoes').value),
                         criado_por: currentUser.id
                     };
 
@@ -1263,14 +1340,17 @@
                     try {
                         const { data: functionData, error: functionError } = await db.functions.invoke('send-service-email', {
                             body: {
-                                recipientEmail: payload.email_destino,
+                                // Mantido por compatibilidade com a versão anterior da Edge Function.
+                                // Os destinatários reais são lidos no Secret EMAIL_TO.
+                                recipientEmail: 'destinatarios-configurados@insolo.local',
                                 date: payload.data_servico,
                                 time: formatTime(insertedService.created_at),
                                 airline: payload.companhia,
                                 prefix: payload.prefixo,
                                 flight: payload.voo,
                                 equipment: payload.tipo_locacao,
-                                re: payload.re_funcionario
+                                re: payload.re_funcionario,
+                                observations: payload.observacoes
                             }
                         });
 
@@ -1330,7 +1410,7 @@
 
                 let query = db
                     .from('registros_servico')
-                    .select('id, data_servico, companhia, prefixo, voo, tipo_locacao, re_funcionario, created_at')
+                    .select('id, data_servico, companhia, prefixo, voo, tipo_locacao, re_funcionario, observacoes, assinatura_path, created_at')
                     .gte('data_servico', startDate)
                     .lte('data_servico', endDate)
                     .order('data_servico', { ascending: false })
@@ -1352,7 +1432,9 @@
                         prefix: item.prefixo,
                         flight: item.voo,
                         equipment: item.tipo_locacao,
-                        re: item.re_funcionario
+                        re: item.re_funcionario,
+                        observations: item.observacoes,
+                        signaturePath: item.assinatura_path
                     })),
                     startDate,
                     endDate,
@@ -1369,11 +1451,13 @@
                     <tr>
                         <td>${escapeHtml(formatDate(row.date))}</td>
                         <td>${escapeHtml(row.time || formatTime(row.createdAt))}</td>
-                        <td>${escapeHtml(row.airline)}</td>
-                        <td>${escapeHtml(row.prefix)}</td>
-                        <td>${escapeHtml(row.flight)}</td>
-                        <td>${escapeHtml(row.equipment)}</td>
-                        <td>${escapeHtml(row.re)}</td>
+                        <td>${escapeHtml(valueOrDash(row.airline))}</td>
+                        <td>${escapeHtml(valueOrDash(row.prefix))}</td>
+                        <td>${escapeHtml(valueOrDash(row.flight))}</td>
+                        <td>${escapeHtml(valueOrDash(row.equipment))}</td>
+                        <td>${escapeHtml(valueOrDash(row.re))}</td>
+                        <td>${escapeHtml(valueOrDash(row.observations))}</td>
+                        <td>${row.signaturePath ? 'Registrada' : '—'}</td>
                     </tr>
                 `).join('');
 
@@ -1386,8 +1470,10 @@
                                 <th>Cia.</th>
                                 <th>Prefixo</th>
                                 <th>Voo</th>
-                                <th>Equipamento</th>
+                                <th>Tipo de locação</th>
                                 <th>RE</th>
+                                <th>Observações</th>
+                                <th>Assinatura</th>
                             </tr>
                         </thead>
                         <tbody>${body}</tbody>
@@ -1398,8 +1484,18 @@
             function displayReport(report) {
                 reportContent.innerHTML = gerarTabelaHTML(report.rows);
                 reportMeta.textContent = `Período: ${formatDate(report.startDate)} a ${formatDate(report.endDate)} · Companhia: ${report.airline} · ${report.rows.length} registro(s)`;
-                reportResult.classList.add('active');
+                serviceView.hidden = true;
+                reportView.hidden = false;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
+
+            function showServiceView() {
+                reportView.hidden = true;
+                serviceView.hidden = false;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            $('backToServiceBtn').addEventListener('click', showServiceView);
 
             async function getReportWithFeedback(button, loadingText) {
                 if (!db || !currentUser) {
@@ -1439,7 +1535,46 @@
                 return JsPDF;
             }
 
-            function buildReportPdfBlob(report) {
+            function blobToDataUrl(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onerror = () => reject(new Error('Não foi possível preparar a assinatura para o PDF.'));
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.readAsDataURL(blob);
+                });
+            }
+
+            async function getSignaturePdfImage(signaturePath) {
+                if (!signaturePath) return null;
+
+                try {
+                    const { data, error } = await db.storage
+                        .from(SIGNATURE_BUCKET)
+                        .createSignedUrl(signaturePath, 300);
+
+                    if (error || !data?.signedUrl) {
+                        console.warn('Não foi possível obter a assinatura para o PDF:', error?.message || 'URL indisponível');
+                        return null;
+                    }
+
+                    const response = await fetch(data.signedUrl);
+                    if (!response.ok) {
+                        console.warn('Não foi possível baixar a assinatura para o PDF.');
+                        return null;
+                    }
+
+                    const blob = await response.blob();
+                    return {
+                        dataUrl: await blobToDataUrl(blob),
+                        format: blob.type.includes('png') ? 'PNG' : 'JPEG'
+                    };
+                } catch (error) {
+                    console.warn('Falha ao preparar a assinatura para o PDF:', error);
+                    return null;
+                }
+            }
+
+            async function buildReportPdfBlob(report) {
                 const JsPDF = getJsPdfConstructor();
                 const doc = new JsPDF({
                     orientation: 'landscape',
@@ -1451,17 +1586,19 @@
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const pageHeight = doc.internal.pageSize.getHeight();
                 const margin = 10;
+                const availableWidth = pageWidth - (margin * 2);
                 const columns = [
                     { header: 'Data', width: 25, value: (row) => formatDate(row.date) },
                     { header: 'Hora', width: 20, value: (row) => row.time || formatTime(row.createdAt) },
-                    { header: 'Cia.', width: 20, value: (row) => row.airline },
-                    { header: 'Prefixo', width: 28, value: (row) => row.prefix },
-                    { header: 'Voo', width: 25, value: (row) => row.flight },
-                    { header: 'Tipo de locação', width: 112, value: (row) => row.equipment },
-                    { header: 'RE', width: 37, value: (row) => row.re }
+                    { header: 'Cia.', width: 20, value: (row) => valueOrDash(row.airline) },
+                    { header: 'Prefixo', width: 28, value: (row) => valueOrDash(row.prefix) },
+                    { header: 'Voo', width: 25, value: (row) => valueOrDash(row.flight) },
+                    { header: 'Tipo de locação', width: 112, value: (row) => valueOrDash(row.equipment) },
+                    { header: 'RE', width: 37, value: (row) => valueOrDash(row.re) }
                 ];
 
                 let y = 14;
+
                 const drawTitle = () => {
                     doc.setTextColor(44, 62, 80);
                     doc.setFont('helvetica', 'bold');
@@ -1481,14 +1618,16 @@
                     const headerHeight = 7;
                     let x = margin;
                     doc.setFillColor(44, 62, 80);
-                    doc.rect(margin, y, pageWidth - (margin * 2), headerHeight, 'F');
+                    doc.rect(margin, y, availableWidth, headerHeight, 'F');
                     doc.setFont('helvetica', 'bold');
                     doc.setTextColor(255, 255, 255);
                     doc.setFontSize(8);
+
                     columns.forEach((column) => {
                         doc.text(column.header, x + 1.5, y + 4.6);
                         x += column.width;
                     });
+
                     y += headerHeight;
                 };
 
@@ -1508,7 +1647,7 @@
                     let x = margin;
                     if (index % 2 === 1) {
                         doc.setFillColor(248, 250, 252);
-                        doc.rect(margin, y, pageWidth - (margin * 2), rowHeight, 'F');
+                        doc.rect(margin, y, availableWidth, rowHeight, 'F');
                     }
 
                     doc.setDrawColor(209, 213, 219);
@@ -1519,12 +1658,85 @@
                         doc.text(cells[columnIndex], x + 1.5, y + 4.2, { baseline: 'top' });
                         x += column.width;
                     });
+
                     y += rowHeight;
+                };
+
+                const drawDetailsHeading = () => {
+                    const headingHeight = 8;
+                    if (y + headingHeight > pageHeight - margin) {
+                        doc.addPage();
+                        y = margin;
+                    }
+
+                    doc.setFillColor(230, 238, 245);
+                    doc.rect(margin, y, availableWidth, headingHeight, 'F');
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(10);
+                    doc.setTextColor(44, 62, 80);
+                    doc.text('Observações e assinaturas registradas', margin + 2, y + 5.2);
+                    y += headingHeight + 3;
+                };
+
+                const drawDetailCard = async (row, index) => {
+                    const signature = await getSignaturePdfImage(row.signaturePath);
+                    const signatureWidth = 62;
+                    const signatureHeight = 22;
+                    const gap = 5;
+                    const textX = margin + 2;
+                    const imageX = pageWidth - margin - signatureWidth - 2;
+                    const textWidth = availableWidth - signatureWidth - gap - 6;
+                    const summary = `${index + 1}. ${formatDate(row.date)} ${row.time || formatTime(row.createdAt)} | ${valueOrDash(row.airline)} | Prefixo: ${valueOrDash(row.prefix)} | Voo: ${valueOrDash(row.flight)} | ${valueOrDash(row.equipment)} | RE: ${valueOrDash(row.re)}`;
+                    const summaryLines = doc.splitTextToSize(summary, textWidth);
+                    const observationText = `Observações: ${valueOrDash(row.observations)}`;
+                    const observationLines = doc.splitTextToSize(observationText, textWidth);
+                    const textHeight = (summaryLines.length * 3.8) + (observationLines.length * 3.8);
+                    const cardHeight = Math.max(34, textHeight + 10);
+
+                    if (y + cardHeight > pageHeight - margin) {
+                        doc.addPage();
+                        y = margin;
+                        drawDetailsHeading();
+                    }
+
+                    doc.setFillColor(index % 2 === 0 ? 252 : 248, index % 2 === 0 ? 253 : 250, index % 2 === 0 ? 255 : 252);
+                    doc.roundedRect(margin, y, availableWidth, cardHeight, 1.5, 1.5, 'F');
+                    doc.setDrawColor(209, 213, 219);
+                    doc.roundedRect(margin, y, availableWidth, cardHeight, 1.5, 1.5, 'S');
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(31, 41, 55);
+                    doc.text(summaryLines, textX, y + 4, { baseline: 'top' });
+                    doc.text(observationLines, textX, y + 4 + (summaryLines.length * 3.8) + 2, { baseline: 'top' });
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(7);
+                    doc.setTextColor(55, 65, 81);
+                    doc.text('Assinatura:', imageX, y + 4);
+
+                    if (signature?.dataUrl) {
+                        doc.addImage(signature.dataUrl, signature.format, imageX, y + 6, signatureWidth, signatureHeight);
+                    } else {
+                        doc.setDrawColor(189, 195, 199);
+                        doc.rect(imageX, y + 6, signatureWidth, signatureHeight);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(7);
+                        doc.setTextColor(127, 140, 141);
+                        doc.text('Não registrada', imageX + (signatureWidth / 2), y + 18, { align: 'center' });
+                    }
+
+                    y += cardHeight + 3;
                 };
 
                 drawTitle();
                 drawHeader();
                 report.rows.forEach(drawRow);
+
+                drawDetailsHeading();
+                for (let index = 0; index < report.rows.length; index += 1) {
+                    await drawDetailCard(report.rows[index], index);
+                }
 
                 const totalPages = doc.getNumberOfPages();
                 for (let page = 1; page <= totalPages; page += 1) {
@@ -1538,6 +1750,7 @@
                 if (!(blob instanceof Blob) || blob.size < 800) {
                     throw new Error('O arquivo PDF gerado ficou vazio.');
                 }
+
                 return blob;
             }
 
